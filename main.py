@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
+import regex
 
 
 URL = "https://www.supremecommunity.com/season/fall-winter2023/times/us/"
@@ -11,7 +12,6 @@ page.text
 soup = BeautifulSoup(page.text,'html.parser')### full html page
 
 
-
 seasonal_drops = soup.find_all(type="radio")### seasons
 
 
@@ -20,61 +20,111 @@ supreme_seasonal = []
 for season in seasonal_drops:
     supreme_seasonal.append((season.get('value')))
 
+##supreme_seasonal = list of supreme seasons
 
-base_url = 'https://www.supremecommunity.com/season'
-print(supreme_seasonal)
-seasonal_index_selection = (int(input("input desired season index-- remember python starts at 0 ")))
-base_url+= supreme_seasonal[seasonal_index_selection]
-cleaned_url = base_url.replace('/season/season','/season')
 
-#### url working!!!
-# new_URL = base_url
-new_page = requests.get(cleaned_url)
+def create_seasonal_links(links):
+    base_url = 'https://www.supremecommunity.com/season'
+    seasonal_links_formatted = []
+    base_url +=links
+    cleaned_url = base_url.replace('/season/season','/season')
+    seasonal_links_formatted.append(cleaned_url)
+    return seasonal_links_formatted
 
-new_page.text
 
-new_soup = BeautifulSoup(new_page.text,'html.parser')
+season_links = [create_seasonal_links(x) for x in supreme_seasonal]
+#print((season_links[2]))
 
-weekly_links = new_soup.find_all('a',class_='week-item__title opener')
+flat_list = [item for sublist in season_links for item in sublist]
 
-supreme_weekly = []
-for link in weekly_links:
-    link_url = link['href']
-    supreme_weekly.append(link_url)
+
+
+
+
+
+def season_parser(season_link):
+    new_page = requests.get(season_link)
+    new_page.text
+    new_soup = BeautifulSoup(new_page.text,'html.parser')
+    weekly_links = new_soup.find_all('a',class_='week-item__title opener')
+    return weekly_links
+    
+
+week_links = [season_parser(n) for n in flat_list]
+
+flat_list_2 = [item for sublist in week_links for item in sublist]
+
+all_supreme_weeks = []
+
+for line in flat_list_2:
+    x = line['href']
+    all_supreme_weeks.append(x)
+
 
 
 base_url_weekly = 'https://www.supremecommunity.com'
-print(supreme_weekly)
-weekly_index_selection = (int(input('choose weekly index')))
-base_url_weekly += supreme_weekly[weekly_index_selection]
-base_url_weekly.replace('/season/season','/season')
-cleaned_url_weekly = base_url_weekly.replace('/season/season','/season')
+
+
+clean_links = []
+for week in all_supreme_weeks:
+    j = base_url_weekly+week
+    clean_links.append(j)
 
 
 
-# print(cleaned_url_weekly)
+# print(clean_links)
 
 
 
-URL = cleaned_url_weekly
-page = requests.get(URL)
+##clean_links has all the links for every week in every season
+for links in clean_links:
+    URL = links
+    webpage = requests.get(URL)
+    webpage.text
+    soup = BeautifulSoup(webpage.text,'html.parser')
+    supreme_list= soup.find_all(attrs = {'class':['restocks-item__title', 'restocks-item__option', 'restocks-item__price']})
+    supreme_items = []
+    for product in supreme_list:
+        supreme_items.append(product.get_text())
 
-page.text
-
-soup = BeautifulSoup(page.text,'html.parser')
-
-supreme_list= soup.find_all(attrs = {'class':['restocks-item__title', 'restocks-item__option', 'restocks-item__price']})
-
-
-supreme_items = []
-for product in supreme_list:
-    supreme_items.append(product.get_text())
+    supreme_items2 = [line.replace('\n','') for line in supreme_items]
     
+    data = [supreme_items2[i:i+3] for i in range(0,len(supreme_items2),3)]
+    appended_data = []
+    
+    
+    df = pd.DataFrame(data, columns=['Item Name', 'Item Color and Size', 'Item Sellout time'])
 
-supreme_items2 = [line.replace('\n','') for line in supreme_items]
+    df['Item Sellout time'] = df['Item Sellout time'].replace('[a-zA-Z,#]', '0', regex=True)
 
-data = [supreme_items2[i:i+3] for i in range(0,len(supreme_items2),3)]
+    df["Item Sellout time"] = pd.to_numeric(df["Item Sellout time"])
+        
 
-df = pd.DataFrame(data, columns=['Item Name', 'Item Color and Size', 'Item Sellout time'])
+    
+    
+    
+    
+    with open(URL[-11:-1]+'.csv','w',encoding="utf-8") as empty_csv:
+        df.to_csv(empty_csv, index=False)
+        # empty_csv.merge(empty_csv[+1],how = 'outer')
+    
+        
 
-print(df)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
