@@ -1,0 +1,80 @@
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
+
+
+URL = "https://www.supremecommunity.com/season/fall-winter2023/times/us/"
+page = requests.get(URL)
+
+page.text
+
+soup = BeautifulSoup(page.text,'html.parser')### full html page
+
+
+
+seasonal_drops = soup.find_all(type="radio")### seasons
+
+
+#seasonal menu 
+supreme_seasonal = []
+for season in seasonal_drops:
+    supreme_seasonal.append((season.get('value')))
+
+
+base_url = 'https://www.supremecommunity.com/season'
+print(supreme_seasonal)
+seasonal_index_selection = (int(input("input desired season index-- remember python starts at 0 ")))
+base_url+= supreme_seasonal[seasonal_index_selection]
+cleaned_url = base_url.replace('/season/season','/season')
+
+#### url working!!!
+# new_URL = base_url
+new_page = requests.get(cleaned_url)
+
+new_page.text
+
+new_soup = BeautifulSoup(new_page.text,'html.parser')
+
+weekly_links = new_soup.find_all('a',class_='week-item__title opener')
+
+supreme_weekly = []
+for link in weekly_links:
+    link_url = link['href']
+    supreme_weekly.append(link_url)
+
+
+base_url_weekly = 'https://www.supremecommunity.com'
+print(supreme_weekly)
+weekly_index_selection = (int(input('choose weekly index')))
+base_url_weekly += supreme_weekly[weekly_index_selection]
+base_url_weekly.replace('/season/season','/season')
+cleaned_url_weekly = base_url_weekly.replace('/season/season','/season')
+
+
+
+# print(cleaned_url_weekly)
+
+
+
+URL = cleaned_url_weekly
+page = requests.get(URL)
+
+page.text
+
+soup = BeautifulSoup(page.text,'html.parser')
+
+supreme_list= soup.find_all(attrs = {'class':['restocks-item__title', 'restocks-item__option', 'restocks-item__price']})
+
+
+supreme_items = []
+for product in supreme_list:
+    supreme_items.append(product.get_text())
+    
+
+supreme_items2 = [line.replace('\n','') for line in supreme_items]
+
+data = [supreme_items2[i:i+3] for i in range(0,len(supreme_items2),3)]
+
+df = pd.DataFrame(data, columns=['Item Name', 'Item Color and Size', 'Item Sellout time'])
+
+print(df)
