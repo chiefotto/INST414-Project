@@ -91,6 +91,7 @@ for links in clean_links:
     
 supreme_items2 = [line.replace('\n','') for line in supreme_items]
 
+
 data = [supreme_items2[i:i+3] for i in range(0,len(supreme_items2),3)]
 
 df = pd.DataFrame(data, columns=['Item Name', 'Item Color and Size', 'Item Sellout time'])
